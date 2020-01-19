@@ -4,7 +4,7 @@ Regex
 * Several protected fields and methods (but we don't derive from it)
 * Is an executable regular expression: also utility static methods
 * Holds static RegexCache (of Regexes)
-* Constructor 
+* Constructor
     * sets RegexCode using RegexParser and RegexWriter
     * if RegexOptions.Compiled, compiles and holds a RegexRunnerFactory and clears RegexCode
 * Run
@@ -27,9 +27,10 @@ Regex
 RegexParser
 * `RegexTree Parse(string pattern, RegexOptions options...) {}`
 * Also has Escape/Unescape methods, and parses into RegexReplacements
+* Does a partial prescan to prep capture slots
 * Converts pattern to RegexTree of RegexNodes
-* Optimizations occur on every RegexNode.AddChild() (Reduce())
-* Final call to RegexNode.FinalOptimize()
+* Every RegexNode.AddChild() calls Reduce() to reduce subtree
+* Parsing ends with call to RegexNode.FinalOptimize()
 
     RegexReplacement
     * Parsed replacement pattern
@@ -39,23 +40,27 @@ RegexParser
     * Representation of single, range, or class as packed string
     * Created by RegexParser
     * String is held on RegexNode
+    * Optimized for testing char vs class (`CharInClass(..)`)
 
     RegexNode
     * Created by RegexParser
     * Node in regex parse tree
     * Some nodes represent subsequent optimizations
-    * Holds Children and Next (TODOdump)
+    * Holds Children and Next
     * Holds char (or?) string (which may be char class), and M and N constants (eg loop bounds)
     * Type int indicates interpretation
+    * Has Dump() for debugging
 
     RegexTree
     * Created by RegexParser
     * Simple holder for root RegexNode, options, and captures datastructure
+    * Has Dump() for debugging
 
 RegexWriter
 * Invoked by Regex
 * Creates itself `RegexCode Write(RegexTree tree){}`
 * Converts RegexTree to RegexCode
+* If RegexOptions.Debug, Write(..) will dump input and output
 
     RegexFCD (uses RegexFC)
     * Deals with static pattern prefixes (FC=first chars)
@@ -114,9 +119,10 @@ RegexRunner
     * `protected abstract bool FindFirstChar()`
     * `public Match? Scan(System.Text.RegularExpressions.Regex regex, string text...)` calls FindFirstChar() and Go()
 * Has a "quick" mode for true/false matches
-* Concrete instances created only by `Match? Regex.Run(...)`
-    * calling either `RegexRunner CompiledRegexRunnerFactory.CreateInstance()` or newing up RegexInterpreter
+* Concrete instances created only by `Match? Regex.Run(...)` calling either `RegexRunner CompiledRegexRunnerFactory.CreateInstance()` or newing up RegexInterpreter
+* It and derived types have DumpState() for debugging purposes
 
+Two derived types
     RegexInterpreter -> RegexRunner
     CompiledRegexRunner ->  RegexRunner
 
@@ -125,6 +131,7 @@ RegexRunner
 Match -> Group
 * Holds a Regex in order to call NextMatch()
 * Created by RegexRunner
+* Has Dump() for debugging
 
 Group -> Capture
 Capture
@@ -146,9 +153,3 @@ RegexMatchTimeoutException
 MatchSparse -> Match
 * Optimization detail
 
-========dumping============
-RegexTree and RegexNode can dump themselves
-Match can dump
-Interpreter can dump state
-RegexWriter can dump both input RegexTree and output RegexCode
-RegexBoyerMoore can dump itself
